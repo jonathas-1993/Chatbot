@@ -7,9 +7,11 @@
 </head>
 <body>
   <div id="chat-container">
+    <img src="fiscabot.png" alt="Fiscabot" style="width:80px;display:block;margin:10px auto;">
     <div id="chat-box"></div>
     <input type="text" id="user-input" placeholder="Digite aqui..." autofocus>
     <button onclick="sendMessage()">Enviar</button>
+    <button onclick="iniciarReconhecimento()">🎤 Falar</button>
   </div>
 
   <script>
@@ -25,6 +27,7 @@
       msg.textContent = text;
       chatBox.appendChild(msg);
       chatBox.scrollTop = chatBox.scrollHeight;
+      if (sender === "bot") falar(text); // fala em voz alta
     }
 
     function validarData(valor) {
@@ -164,13 +167,19 @@
 
     async function salvarDenuncia() {
       try {
-        await fetch("/denuncia", {
+        const res = await fetch("/denuncia", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(denuncia)
         });
+        const data = await res.json();
+        if (data.success) {
+          addMessage("bot", "📡 Dados enviados ao Supabase!");
+        } else {
+          addMessage("bot", "⚠️ Erro ao salvar denúncia no Supabase.");
+        }
       } catch (err) {
-        console.error("Erro ao salvar denúncia:", err);
+        addMessage("bot", "⚠️ Erro de conexão com o servidor.");
       }
     }
 
@@ -180,8 +189,27 @@
       }, 3000);
     }
 
+    // 🔊 Voz: fala as respostas
+    function falar(texto) {
+      const utterance = new SpeechSynthesisUtterance(texto);
+      utterance.lang = "pt-BR";
+      speechSynthesis.speak(utterance);
+    }
+
+    // 🎤 Voz: reconhecimento de fala
+    function iniciarReconhecimento() {
+      const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+      recognition.lang = "pt-BR";
+      recognition.onresult = function(event) {
+        const texto = event.results[0][0].transcript;
+        input.value = texto;
+        sendMessage();
+      };
+      recognition.start();
+    }
+
     // Start
-    addMessage("bot", "👋 Bem-vindo ao Fiscabot! Digite qualquer coisa para começar.");
+    addMessage("bot", "👋 Bem-vindo ao Fiscabot! Digite ou fale algo para começar.");
   </script>
 </body>
 </html>
