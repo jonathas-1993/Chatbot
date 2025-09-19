@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <title>Fiscabot - DEMO</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="chat-container">
+    <h1>🚦 Fiscabot — Assistente de Fiscalização (DETRAN-AM) — Demo</h1>
+
+    <!-- Apresentação -->
+    <div id="presentation" class="bot-bubble">
+      <p><b>Olá — eu sou o Fiscabot.</b></p>
+      <p>Sou um assistente de apoio à fiscalização de trânsito criado para receber denúncias e organizar as informações de forma padronizada (ficha MBFT / CTB).</p>
+      <p><i>Observação:</i> Este é um protótipo — não substitui canais oficiais do DETRAN-AM. Para ações oficiais, use os canais institucionais.</p>
+      <p>Escolha uma opção:</p>
+      <ol>
+        <li>Denúncia de <b>Rolezinho</b> (bloqueio/manobras)</li>
+        <li>Denúncia de <b>Adega</b> (estabelecimento/condutas correlatas)</li>
+        <li>Denúncia de <b>Estacionamento Irregular</b></li>
+        <li>Encerrar conversa</li>
+      </ol>
+      <div class="options">
+        <button onclick="startFlow(1)">1 — Rolezinho</button>
+        <button onclick="startFlow(2)">2 — Adega</button>
+        <button onclick="startFlow(3)">3 — Estacion. Irregular</button>
+        <button onclick="endConversation()">4 — Encerrar</button>
+      </div>
+    </div>
+
+    <!-- Container onde os formulários dinâmicos aparecem -->
+    <div id="form-area"></div>
+
+    <!-- Area de status/result -->
+    <div id="status-area"></div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
