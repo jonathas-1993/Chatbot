@@ -7,11 +7,13 @@
 </head>
 <body>
   <div id="chat-container">
-    <img src="fiscabot.png" alt="Fiscabot" style="width:80px;display:block;margin:10px auto;">
+    <img src="fiscabot.png" alt="Fiscabot - DETRAN-AM">
     <div id="chat-box"></div>
-    <input type="text" id="user-input" placeholder="Digite aqui..." autofocus>
-    <button onclick="sendMessage()">Enviar</button>
-    <button onclick="iniciarReconhecimento()">🎤 Falar</button>
+    <div style="display:flex; width:100%; margin-top:5px;">
+      <input type="text" id="user-input" placeholder="Digite aqui..." autofocus>
+      <button onclick="sendMessage()">Enviar</button>
+      <button onclick="iniciarReconhecimento()">🎤 Falar</button>
+    </div>
   </div>
 
   <script>
@@ -21,195 +23,127 @@
     let etapa = "inicio";
     let denuncia = {};
 
+    const diasValidos = ["segunda", "segunda-feira","terça","terça-feira","quarta","quarta-feira","quinta","quinta-feira","sexta","sexta-feira","sábado","sabado","domingo"];
+
     function addMessage(sender, text) {
       const msg = document.createElement("div");
       msg.className = sender;
       msg.textContent = text;
       chatBox.appendChild(msg);
       chatBox.scrollTop = chatBox.scrollHeight;
-      if (sender === "bot") falar(text); // fala em voz alta
+      if(sender==="bot") falar(text);
     }
 
-    function validarData(valor) {
-      return /^\d{2}\/\d{2}\/\d{4}$/.test(valor);
+    function validarData(valor) { return /^\d{2}\/\d{2}\/\d{4}$/.test(valor); }
+    function validarHora(valor) { return /^([01]\d|2[0-3]):[0-5]\d$/.test(valor); }
+
+    function validarDia(texto){
+      return diasValidos.includes(texto.toLowerCase());
     }
 
-    function validarHora(valor) {
-      return /^([01]\d|2[0-3]):[0-5]\d$/.test(valor);
-    }
-
-    function sendMessage() {
-      const text = input.value.trim();
-      if (!text) return;
-      addMessage("user", text);
-      input.value = "";
-
-      switch (etapa) {
-        case "inicio":
-          addMessage("bot", "👮‍♂️ Olá! Eu sou o Fiscabot, assistente do DETRAN-AM.\nSelecione o tipo de denúncia:\n1️⃣ Rolezinho\n2️⃣ Adega\n3️⃣ Estacionamento irregular");
-          etapa = "tipo";
-          break;
-
-        case "tipo":
-          if (text === "1") { denuncia.tipo = "Rolezinho"; addMessage("bot", "📍 Informe o local do evento:"); etapa = "local"; }
-          else if (text === "2") { denuncia.tipo = "Adega"; addMessage("bot", "🏪 Informe o nome do local:"); etapa = "nome_local"; }
-          else if (text === "3") {
-            denuncia.tipo = "Estacionamento irregular";
-            addMessage("bot", "🚗 Esse tipo de ocorrência é de competência municipal.\n📞 Ligue: 0800 092 1188 ou (92) 98802-3782.");
-            finalizarConversa();
-          } else {
-            addMessage("bot", "Opção inválida. Escolha 1, 2 ou 3.");
-          }
-          break;
-
-        // ROLEZINHO
-        case "local":
-          denuncia.local = text;
-          addMessage("bot", "🏘 Informe o bairro:");
-          etapa = "bairro";
-          break;
-
-        case "bairro":
-          denuncia.bairro = text;
-          addMessage("bot", "📍 Informe um ponto de referência:");
-          etapa = "referencia";
-          break;
-
-        case "referencia":
-          denuncia.referencia = text;
-          addMessage("bot", "📅 Informe a data do evento (dd/mm/aaaa):");
-          etapa = "data_evento";
-          break;
-
-        case "data_evento":
-          if (!validarData(text)) { addMessage("bot", "⚠️ Data inválida. Use o formato dd/mm/aaaa."); return; }
-          denuncia.data_evento = text;
-          addMessage("bot", "🗓 Qual o dia da semana?");
-          etapa = "dia_semana";
-          break;
-
-        case "dia_semana":
-          denuncia.dia_semana = text;
-          addMessage("bot", "⏰ Informe a hora de início (HH:MM):");
-          etapa = "hora_inicio";
-          break;
-
-        case "hora_inicio":
-          if (!validarHora(text)) { addMessage("bot", "⚠️ Hora inválida. Use o formato HH:MM."); return; }
-          denuncia.hora_inicio = text;
-          addMessage("bot", "⏰ Informe a hora de término (HH:MM):");
-          etapa = "hora_fim";
-          break;
-
-        case "hora_fim":
-          if (!validarHora(text)) { addMessage("bot", "⚠️ Hora inválida. Use o formato HH:MM."); return; }
-          denuncia.hora_fim = text;
-          addMessage("bot", "📝 Alguma observação adicional?");
-          etapa = "observacoes";
-          break;
-
-        // ADEGA
-        case "nome_local":
-          denuncia.nome_local = text;
-          addMessage("bot", "🏘 Informe o bairro:");
-          etapa = "bairro_adega";
-          break;
-
-        case "bairro_adega":
-          denuncia.bairro = text;
-          addMessage("bot", "📍 Informe o endereço completo:");
-          etapa = "endereco";
-          break;
-
-        case "endereco":
-          denuncia.endereco = text;
-          addMessage("bot", "🗓 Qual o dia da semana mais movimentado?");
-          etapa = "dia_semana_adega";
-          break;
-
-        case "dia_semana_adega":
-          denuncia.dia_semana = text;
-          addMessage("bot", "⏰ Qual o horário de maior movimentação (HH:MM)?");
-          etapa = "hora_inicio_adega";
-          break;
-
-        case "hora_inicio_adega":
-          if (!validarHora(text)) { addMessage("bot", "⚠️ Hora inválida. Use HH:MM."); return; }
-          denuncia.hora_inicio = text;
-          addMessage("bot", "⏰ Informe o horário de encerramento (HH:MM):");
-          etapa = "hora_fim_adega";
-          break;
-
-        case "hora_fim_adega":
-          if (!validarHora(text)) { addMessage("bot", "⚠️ Hora inválida. Use HH:MM."); return; }
-          denuncia.hora_fim = text;
-          addMessage("bot", "📝 Alguma observação adicional?");
-          etapa = "observacoes";
-          break;
-
-        // FINALIZA
-        case "observacoes":
-          denuncia.observacoes = text;
-          resumoDenuncia();
-          salvarDenuncia();
-          break;
-      }
-    }
-
-    function resumoDenuncia() {
-      addMessage("bot", "📑 Resumo da denúncia:");
-      Object.entries(denuncia).forEach(([k, v]) => {
-        addMessage("bot", `${k}: ${v}`);
-      });
-      addMessage("bot", "✅ Obrigado! Sua denúncia foi registrada.");
-      finalizarConversa();
-    }
-
-    async function salvarDenuncia() {
-      try {
-        const res = await fetch("/denuncia", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(denuncia)
-        });
-        const data = await res.json();
-        if (data.success) {
-          addMessage("bot", "📡 Dados enviados ao Supabase!");
-        } else {
-          addMessage("bot", "⚠️ Erro ao salvar denúncia no Supabase.");
-        }
-      } catch (err) {
-        addMessage("bot", "⚠️ Erro de conexão com o servidor.");
-      }
-    }
-
-    function finalizarConversa() {
-      setTimeout(() => {
-        document.body.innerHTML = "<h2 style='text-align:center; margin-top:50px;'>✅ Conversa encerrada.</h2>";
-      }, 3000);
-    }
-
-    // 🔊 Voz: fala as respostas
-    function falar(texto) {
+    function falar(texto){
+      texto = texto.replace(/🎶/g,"música")
+                   .replace(/🍻/g,"cerveja")
+                   .replace(/🚗/g,"carro")
+                   .replace(/✅/g,"concluído")
+                   .replace(/📅/g,"data")
+                   .replace(/⏰/g,"hora")
+                   .replace(/📍/g,"local")
+                   .replace(/🏘/g,"bairro")
+                   .replace(/🏪/g,"estabelecimento")
+                   .replace(/📑/g,"resumo");
       const utterance = new SpeechSynthesisUtterance(texto);
-      utterance.lang = "pt-BR";
+      utterance.lang="pt-BR";
       speechSynthesis.speak(utterance);
     }
 
-    // 🎤 Voz: reconhecimento de fala
     function iniciarReconhecimento() {
       const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
       recognition.lang = "pt-BR";
-      recognition.onresult = function(event) {
-        const texto = event.results[0][0].transcript;
-        input.value = texto;
+      recognition.onresult = function(event){
+        input.value = event.results[0][0].transcript;
         sendMessage();
       };
       recognition.start();
     }
 
-    // Start
-    addMessage("bot", "👋 Bem-vindo ao Fiscabot! Digite ou fale algo para começar.");
+    async function salvarDenuncia() {
+      try{
+        const res = await fetch("/denuncia",{
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body:JSON.stringify(denuncia)
+        });
+        const data = await res.json();
+        if(data.success) addMessage("bot","Dados enviados ao Supabase!");
+        else addMessage("bot","Erro ao salvar denúncia no Supabase.");
+      } catch(err){
+        addMessage("bot","Erro de conexão com o servidor.");
+      }
+    }
+
+    function finalizarConversa(){
+      setTimeout(()=>{document.body.innerHTML="<h2 style='text-align:center; margin-top:50px;'>Conversa encerrada.</h2>";},3000);
+    }
+
+    function sendMessage(){
+      const text = input.value.trim();
+      if(!text) return;
+      addMessage("user",text);
+      input.value = "";
+
+      switch(etapa){
+        case "inicio":
+          addMessage("bot","Olá! Eu sou o Fiscabot, assistente do DETRAN-AM.\nEscolha o tipo de denúncia:\n1 Rolezinho\n2 Adega\n3 Estacionamento irregular");
+          etapa="tipo";
+          break;
+
+        case "tipo":
+          if(text==="1"){denuncia.tipo="Rolezinho"; addMessage("bot","Informe o local do evento:"); etapa="local";}
+          else if(text==="2"){denuncia.tipo="Adega"; addMessage("bot","Informe o nome do estabelecimento:"); etapa="nome_local";}
+          else if(text==="3"){denuncia.tipo="Estacionamento irregular"; addMessage("bot","Esse tipo é municipal. Ligue 0800 092 1188."); finalizarConversa();}
+          else addMessage("bot","Opção inválida. Escolha 1, 2 ou 3.");
+          break;
+
+        case "local": denuncia.local=text; addMessage("bot","Informe o bairro:"); etapa="bairro"; break;
+        case "bairro": denuncia.bairro=text; addMessage("bot","Informe um ponto de referência:"); etapa="referencia"; break;
+        case "referencia": denuncia.referencia=text; addMessage("bot","Informe a data do evento (dd/mm/aaaa):"); etapa="data_evento"; break;
+        case "data_evento":
+          if(!validarData(text)){addMessage("bot","Data inválida. Use dd/mm/aaaa."); return;}
+          denuncia.data_evento=text; addMessage("bot","Qual o dia da semana?"); etapa="dia_semana"; break;
+        case "dia_semana":
+          if(!validarDia(text)){addMessage("bot","Dia inválido. Informe: segunda, terça, quarta, quinta, sexta, sábado ou domingo."); return;}
+          denuncia.dia_semana=text; addMessage("bot","Informe a hora de início (HH:MM):"); etapa="hora_inicio"; break;
+        case "hora_inicio":
+          if(!validarHora(text)){addMessage("bot","Hora inválida. Use HH:MM."); return;}
+          denuncia.hora_inicio=text; addMessage("bot","Informe a hora de término (HH:MM):"); etapa="hora_fim"; break;
+        case "hora_fim":
+          if(!validarHora(text)){addMessage("bot","Hora inválida. Use HH:MM."); return;}
+          denuncia.hora_fim=text; addMessage("bot","Alguma observação adicional?"); etapa="observacoes"; break;
+        case "observacoes":
+          denuncia.observacoes=text; resumoDenuncia(); salvarDenuncia(); break;
+        case "nome_local": denuncia.nome_local=text; addMessage("bot","Informe o bairro:"); etapa="bairro_adega"; break;
+        case "bairro_adega": denuncia.bairro=text; addMessage("bot","Informe o endereço completo:"); etapa="endereco"; break;
+        case "endereco": denuncia.endereco=text; addMessage("bot","Qual o dia da semana mais movimentado?"); etapa="dia_semana_adega"; break;
+        case "dia_semana_adega":
+          if(!validarDia(text)){addMessage("bot","Dia inválido. Informe: segunda, terça, quarta, quinta, sexta, sábado ou domingo."); return;}
+          denuncia.dia_semana=text; addMessage("bot","Informe o horário de maior movimentação (HH:MM):"); etapa="hora_inicio_adega"; break;
+        case "hora_inicio_adega":
+          if(!validarHora(text)){addMessage("bot","Hora inválida."); return;}
+          denuncia.hora_inicio=text; addMessage("bot","Informe o horário de encerramento (HH:MM):"); etapa="hora_fim_adega"; break;
+        case "hora_fim_adega":
+          if(!validarHora(text)){addMessage("bot","Hora inválida."); return;}
+          denuncia.hora_fim=text; addMessage("bot","Alguma observação adicional?"); etapa="observacoes"; break;
+      }
+    }
+
+    function resumoDenuncia(){
+      addMessage("bot","Resumo da denúncia:");
+      Object.entries(denuncia).forEach(([k,v])=>{addMessage("bot",`${k}: ${v}`);});
+      addMessage("bot","Obrigado! Sua denúncia foi registrada."); finalizarConversa();
+    }
+
+    addMessage("bot","Bem-vindo ao Fiscabot! Digite ou fale algo para começar.");
   </script>
 </body>
 </html>
