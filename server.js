@@ -1,38 +1,49 @@
-const express = require("express");
-const path = require("path");
-const bodyParser = require("body-parser");
-const cors = require("cors");
-const QRCode = require("qrcode");
+import express from "express";
+import bodyParser from "body-parser";
+import cors from "cors";
+import { createClient } from "@supabase/supabase-js";
 
 const app = express();
-const PORT = process.env.PORT || 3000; // Render define a porta
-
-// Middlewares
 app.use(cors());
 app.use(bodyParser.json());
-app.use(express.static(path.join(__dirname, "public"))); // serve index.html
+app.use(express.static("public"));
 
-// Rota de teste
-app.get("/ping", (req, res) => {
-  res.send("✅ Fiscabot rodando no Render!");
-});
+// 🔑 Variáveis de ambiente (Render → Environment Variables)
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_KEY = process.env.SUPABASE_KEY;
 
-// Rota para gerar QRCode com o link do app
-app.get("/qrcode", async (req, res) => {
+// Cliente do Supabase
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// Endpoint para salvar denúncia
+app.post("/denuncia", async (req, res) => {
   try {
-    const url = `https://${req.headers.host}`;
-    const qr = await QRCode.toDataURL(url);
-    res.send(`
-      <h2>📲 Acesse o Fiscabot pelo QRCode</h2>
-      <img src="${qr}" />
-      <p><a href="${url}" target="_blank">${url}</a></p>
-    `);
+    const { tipo, local, bairro, referencia, nome_local, endereco, data_evento, dia_semana, hora_inicio, hora_fim, observacoes } = req.body;
+
+    const { data, error } = await supabase
+      .from("denuncias")
+      .insert([{
+        tipo,
+        local,
+        bairro,
+        referencia,
+        nome_local,
+        endereco,
+        data_evento,
+        dia_semana,
+        hora_inicio,
+        hora_fim,
+        observacoes
+      }]);
+
+    if (error) throw error;
+
+    res.json({ success: true, message: "Denúncia registrada com sucesso!" });
   } catch (err) {
-    res.status(500).send("Erro ao gerar QR Code");
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
-// Start do servidor
-app.listen(PORT, () => {
-  console.log(`🚦 Servidor Fiscabot rodando na porta ${PORT}`);
-});
+// Porta dinâmica (Render usa process.env.PORT)
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`✅ Fiscabot rodando na porta ${PORT}`));
