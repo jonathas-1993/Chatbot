@@ -2,6 +2,7 @@
   "name": "fiscabot",
   "version": "1.0.0",
   "description": "Prototipo Fiscabot - assistente de fiscalização (DETRAN-AM) - demo Render",
+  "type": "module",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
