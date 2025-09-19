@@ -15,10 +15,33 @@ const SUPABASE_KEY = process.env.SUPABASE_KEY;
 // Cliente do Supabase
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
+// Função util para converter "dd/mm/aaaa" → "aaaa-mm-dd"
+function converterData(dataBR) {
+  const [dia, mes, ano] = dataBR.split("/");
+  return `${ano}-${mes}-${dia}`;
+}
+
 // Endpoint para salvar denúncia
 app.post("/denuncia", async (req, res) => {
   try {
-    const { tipo, local, bairro, referencia, nome_local, endereco, data_evento, dia_semana, hora_inicio, hora_fim, observacoes } = req.body;
+    let {
+      tipo,
+      local,
+      bairro,
+      referencia,
+      nome_local,
+      endereco,
+      data_evento,
+      dia_semana,
+      hora_inicio,
+      hora_fim,
+      observacoes
+    } = req.body;
+
+    // converter data para formato ISO
+    if (data_evento && data_evento.includes("/")) {
+      data_evento = converterData(data_evento);
+    }
 
     const { data, error } = await supabase
       .from("denuncias")
