@@ -8,14 +8,19 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(express.static("public"));
 
-// 🔑 Variáveis de ambiente (Render → Environment Variables)
+// 🔑 Variáveis de ambiente
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_KEY;
 
-// Cliente do Supabase
+if (!SUPABASE_URL || !SUPABASE_KEY) {
+  console.error("⚠️ Supabase URL ou KEY não definida!");
+  process.exit(1);
+}
+
+// Cliente Supabase
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// Função util para converter "dd/mm/aaaa" → "aaaa-mm-dd"
+// Converter "dd/mm/aaaa" → "aaaa-mm-dd"
 function converterData(dataBR) {
   const [dia, mes, ano] = dataBR.split("/");
   return `${ano}-${mes}-${dia}`;
@@ -38,7 +43,6 @@ app.post("/denuncia", async (req, res) => {
       observacoes
     } = req.body;
 
-    // converter data para formato ISO
     if (data_evento && data_evento.includes("/")) {
       data_evento = converterData(data_evento);
     }
@@ -67,6 +71,6 @@ app.post("/denuncia", async (req, res) => {
   }
 });
 
-// Porta dinâmica (Render usa process.env.PORT)
+// Porta dinâmica
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`✅ Fiscabot rodando na porta ${PORT}`));
