@@ -8,7 +8,7 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(express.static("public"));
 
-// 🔑 Variáveis de ambiente
+// Variáveis de ambiente Supabase
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_KEY;
 
@@ -17,16 +17,13 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
   process.exit(1);
 }
 
-// Cliente Supabase
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// Converter "dd/mm/aaaa" → "aaaa-mm-dd"
 function converterData(dataBR) {
   const [dia, mes, ano] = dataBR.split("/");
   return `${ano}-${mes}-${dia}`;
 }
 
-// Endpoint para salvar denúncia
 app.post("/denuncia", async (req, res) => {
   try {
     let {
@@ -64,13 +61,11 @@ app.post("/denuncia", async (req, res) => {
       }]);
 
     if (error) throw error;
-
     res.json({ success: true, message: "Denúncia registrada com sucesso!" });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
 });
 
-// Porta dinâmica
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`✅ Fiscabot rodando na porta ${PORT}`));
