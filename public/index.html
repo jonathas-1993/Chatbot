@@ -1,24 +1,14 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Fiscabot - DETRAN-AM</title>
-  <style>
-    body { font-family: Arial, sans-serif; background: #f4f6f8; margin: 0; }
-    .chat-container {
-      width: 100%; max-width: 500px; margin: 40px auto; background: white;
-      border-radius: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); padding: 20px;
-    }
-    .bot { background: #005baa; color: white; padding: 10px; border-radius: 8px; margin: 5px 0; }
-    .user { background: #e5e5ea; color: black; padding: 10px; border-radius: 8px; margin: 5px 0; text-align: right; }
-    input, button { padding: 10px; border-radius: 8px; border: 1px solid #ccc; margin-top: 10px; width: 70%; }
-    button { background: #005baa; color: white; cursor: pointer; width: 25%; }
-    .input-row { display: flex; justify-content: space-between; }
-  </style>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="chat-container">
+    <img src="fiscabot.png" alt="Fiscabot" style="width: 100%; border-radius: 12px; margin-bottom: 10px;">
     <div id="chat"></div>
     <div class="input-row">
       <input id="userInput" placeholder="Digite sua resposta..." />
@@ -28,8 +18,16 @@
 
   <script>
     const chat = document.getElementById("chat");
-    let etapa = "menu"; // controla o fluxo
-    let denuncia = { tipo: "", local: "", inicio: "", fim: "", obs: "" };
+    let etapa = "menu";
+    let denuncia = {
+      tipo: "",
+      local: "",
+      data_evento: "",
+      dia_semana: "",
+      inicio: "",
+      fim: "",
+      obs: ""
+    };
 
     function addMessage(text, sender) {
       const msg = document.createElement("div");
@@ -40,48 +38,114 @@
     }
 
     // Mensagem inicial
-    addMessage("👮‍♂️ Olá! Eu sou o Fiscabot, assistente da fiscalização do DETRAN-AM.", "bot");
+    addMessage("👮‍♂️ Olá! Eu sou o Fiscabot, assistente de fiscalização do DETRAN-AM.", "bot");
+    addMessage("Este canal é destinado a denúncias de irregularidades de trânsito conforme o CTB. Para assuntos de habilitação, veículos ou multas, ligue para (92) 3643-0001 ou acesse: https://www.detran.am.gov.br/servicos/agendamento-parqueamento/", "bot");
     mostrarMenu();
 
     function mostrarMenu() {
       etapa = "menu";
-      addMessage("Escolha uma opção:\n1 - Denúncia de Rolezinho\n2 - Denúncia de Adega\n3 - Denúncia de Estacionamento Irregular\n4 - Encerrar conversa", "bot");
+      addMessage(`Escolha uma opção:
+1 - Denunciar aglomeração irregular de motociclistas ("Rolezinho")
+2 - Denunciar atividade de "Adega" com som automotivo
+3 - Denunciar estacionamento irregular
+4 - Encerrar atendimento`, "bot");
     }
 
-    function sendMessage() {
+    async function sendMessage() {
       const input = document.getElementById("userInput");
       const text = input.value.trim();
       if (!text) return;
       addMessage(text, "user");
       input.value = "";
 
-      if (etapa === "menu") {
-        if (text === "1") { denuncia.tipo = "Rolezinho"; etapa = "local"; addMessage("📍 Informe o local do Rolezinho:", "bot"); }
-        else if (text === "2") { denuncia.tipo = "Adega"; etapa = "local"; addMessage("📍 Informe o endereço da Adega:", "bot"); }
-        else if (text === "3") { denuncia.tipo = "Estacionamento"; etapa = "local"; addMessage("📍 Informe o local do estacionamento irregular:", "bot"); }
-        else if (text === "4") { addMessage("✅ Obrigado! Conversa encerrada. 🚦", "bot"); }
-        else { addMessage("Opção inválida. Escolha 1, 2, 3 ou 4.", "bot"); }
-      }
-      else if (etapa === "local") {
-        denuncia.local = text;
-        etapa = "inicio";
-        addMessage("⏰ Informe a hora de início (ex: 20:00):", "bot");
-      }
-      else if (etapa === "inicio") {
-        denuncia.inicio = text;
-        etapa = "fim";
-        addMessage("⏰ Informe a hora de fim (ex: 23:30):", "bot");
-      }
-      else if (etapa === "fim") {
-        denuncia.fim = text;
-        etapa = "obs";
-        addMessage("📝 Alguma observação adicional?", "bot");
-      }
-      else if (etapa === "obs") {
-        denuncia.obs = text;
-        etapa = "final";
-        addMessage(`✅ Obrigado. Sua denúncia foi registrada:\nTipo: ${denuncia.tipo}\nLocal: ${denuncia.local}\nInício: ${denuncia.inicio}\nFim: ${denuncia.fim}\nObs: ${denuncia.obs}\n\nSerá encaminhada à equipe de fiscalização do DETRAN-AM, conforme o CTB e o MBFT.`, "bot");
-        mostrarMenu(); // volta ao menu
+      switch (etapa) {
+        case "menu":
+          if (["1", "2", "3"].includes(text)) {
+            denuncia.tipo = text === "1" ? "Rolezinho" : text === "2" ? "Adega" : "Estacionamento irregular";
+            etapa = "local";
+            addMessage(`📍 Informe o local da ocorrência relacionada a ${denuncia.tipo}:`, "bot");
+          } else if (text === "4") {
+            addMessage("✅ Obrigado! Atendimento encerrado. 🚦", "bot");
+          } else {
+            addMessage("Opção inválida. Escolha 1, 2, 3 ou 4.", "bot");
+          }
+          break;
+
+        case "local":
+          denuncia.local = text;
+          etapa = "data";
+          addMessage("📅 Informe a data da ocorrência (ex: 15/10/2025):", "bot");
+          break;
+
+        case "data":
+          denuncia.data_evento = text;
+          etapa = "dia";
+          addMessage("🗓️ Informe o dia da semana (ex: terça-feira):", "bot");
+          break;
+
+        case "dia":
+          denuncia.dia_semana = text;
+          etapa = "inicio";
+          addMessage("⏰ Informe o horário de início (ex: 20:00):", "bot");
+          break;
+
+        case "inicio":
+          denuncia.inicio = text;
+          etapa = "fim";
+          addMessage("⏰ Informe o horário de término (ex: 23:30):", "bot");
+          break;
+
+        case "fim":
+          denuncia.fim = text;
+          etapa = "obs";
+          addMessage("📝 Deseja adicionar alguma observação?", "bot");
+          break;
+
+        case "obs":
+          denuncia.obs = text || "Nenhuma observação.";
+          etapa = "confirmar";
+          addMessage(`✅ Confirme os dados da denúncia:
+Tipo: ${denuncia.tipo}
+Local: ${denuncia.local}
+Data: ${denuncia.data_evento}
+Dia: ${denuncia.dia_semana}
+Início: ${denuncia.inicio}
+Fim: ${denuncia.fim}
+Observação: ${denuncia.obs}`, "bot");
+          addMessage("Deseja enviar esta denúncia? (1 - Sim / 2 - Cancelar)", "bot");
+          break;
+
+        case "confirmar":
+          if (text === "1") {
+            try {
+              const res = await fetch("/denuncia", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  tipo: denuncia.tipo,
+                  local: denuncia.local,
+                  data_evento: denuncia.data_evento,
+                  dia_semana: denuncia.dia_semana,
+                  hora_inicio: denuncia.inicio,
+                  hora_fim: denuncia.fim,
+                  observacoes: denuncia.obs
+                })
+              });
+              const data = await res.json();
+              if (data.success) {
+                addMessage("✅ Denúncia registrada com sucesso! Será analisada pela equipe de fiscalização do DETRAN-AM conforme o CTB e o MBFT.", "bot");
+              } else {
+                addMessage("❌ Erro ao registrar denúncia. Tente novamente.", "bot");
+              }
+            } catch (error) {
+              addMessage("❌ Erro de conexão. Verifique o servidor.", "bot");
+            }
+            mostrarMenu();
+          } else {
+            addMessage("Denúncia cancelada. Voltando ao menu principal.", "bot");
+            mostrarMenu();
+          }
+          break;
       }
     }
   </script>
