@@ -1,34 +1,30 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Fiscabot - DETRAN-AM</title>
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div class="chat-container">
     <img src="fiscabot.png" alt="Fiscabot" style="width: 100%; border-radius: 12px; margin-bottom: 10px;">
     <div id="chat"></div>
+
     <div class="input-row">
-      <input id="userInput" placeholder="Digite sua resposta..." />
-      <button onclick="sendMessage()">Enviar</button>
+      <input id="userInput" placeholder="Digite ou fale..." />
+      <button id="sendBtn">Enviar</button>
     </div>
   </div>
 
   <script>
     const chat = document.getElementById("chat");
+    const input = document.getElementById("userInput");
+    const sendBtn = document.getElementById("sendBtn");
     let etapa = "menu";
-    let denuncia = {
-      tipo: "",
-      local: "",
-      data_evento: "",
-      dia_semana: "",
-      inicio: "",
-      fim: "",
-      obs: ""
-    };
+    let denuncia = {};
 
+    // Mostrar mensagem no chat
     function addMessage(text, sender) {
       const msg = document.createElement("div");
       msg.className = sender;
@@ -37,37 +33,49 @@
       chat.scrollTop = chat.scrollHeight;
     }
 
-    // Mensagem inicial
-    addMessage("👮‍♂️ Olá! Eu sou o Fiscabot, assistente de fiscalização do DETRAN-AM.", "bot");
-    addMessage("Este canal é destinado a denúncias de irregularidades de trânsito conforme o CTB. Para assuntos de habilitação, veículos ou multas, ligue para (92) 3643-0001 ou acesse: https://www.detran.am.gov.br/servicos/agendamento-parqueamento/", "bot");
-    mostrarMenu();
+    // Envio automático com ENTER
+    input.addEventListener("keypress", e => {
+      if (e.key === "Enter") sendMessage();
+    });
+    sendBtn.addEventListener("click", sendMessage);
 
-    function mostrarMenu() {
-      etapa = "menu";
-      addMessage(`Escolha uma opção:
-1 - Denunciar aglomeração irregular de motociclistas ("Rolezinho")
-2 - Denunciar atividade de "Adega" com som automotivo
-3 - Denunciar estacionamento irregular
-4 - Encerrar atendimento`, "bot");
+    // Início
+    addMessage("👮‍♂️ Olá! Eu sou o Fiscabot, assistente do DETRAN-AM.", "bot");
+    addMessage("Escolha uma opção:\n1 - Denunciar Rolezinho\n2 - Denunciar Adega com som\n3 - Denunciar estacionamento irregular\n4 - Encerrar", "bot");
+
+    function validarData(data) {
+      const regex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
+      if (!regex.test(data)) return false;
+      const [dia, mes, ano] = data.split("/").map(Number);
+      const d = new Date(ano, mes - 1, dia);
+      return d.getFullYear() === ano && d.getMonth() === mes - 1 && d.getDate() === dia;
+    }
+
+    function validarHora(hora) {
+      const regex = /^([01]\d|2[0-3]):([0-5]\d)$/;
+      return regex.test(hora);
     }
 
     async function sendMessage() {
-      const input = document.getElementById("userInput");
-      const text = input.value.trim();
+      let text = input.value.trim().toLowerCase();
       if (!text) return;
-      addMessage(text, "user");
       input.value = "";
+      addMessage(text, "user");
+
+      // converter fala “um”, “dois” etc para número
+      const mapaFala = { "um": "1", "dois": "2", "três": "3", "tres": "3", "quatro": "4" };
+      if (mapaFala[text]) text = mapaFala[text];
 
       switch (etapa) {
         case "menu":
           if (["1", "2", "3"].includes(text)) {
             denuncia.tipo = text === "1" ? "Rolezinho" : text === "2" ? "Adega" : "Estacionamento irregular";
             etapa = "local";
-            addMessage(`📍 Informe o local da ocorrência relacionada a ${denuncia.tipo}:`, "bot");
+            addMessage(`📍 Informe o local da ocorrência (${denuncia.tipo}):`, "bot");
           } else if (text === "4") {
-            addMessage("✅ Obrigado! Atendimento encerrado. 🚦", "bot");
+            addMessage("✅ Atendimento encerrado. 🚦", "bot");
           } else {
-            addMessage("Opção inválida. Escolha 1, 2, 3 ou 4.", "bot");
+            addMessage("❌ Opção inválida. Diga ou digite 1, 2, 3 ou 4.", "bot");
           }
           break;
 
@@ -78,41 +86,46 @@
           break;
 
         case "data":
-          denuncia.data_evento = text;
-          etapa = "dia";
-          addMessage("🗓️ Informe o dia da semana (ex: terça-feira):", "bot");
-          break;
-
-        case "dia":
-          denuncia.dia_semana = text;
-          etapa = "inicio";
-          addMessage("⏰ Informe o horário de início (ex: 20:00):", "bot");
+          if (!validarData(text)) {
+            addMessage("❌ Data inválida! Use o formato DD/MM/AAAA e uma data real.", "bot");
+          } else {
+            denuncia.data_evento = text;
+            etapa = "inicio";
+            addMessage("⏰ Informe o horário de início (ex: 20:00):", "bot");
+          }
           break;
 
         case "inicio":
-          denuncia.inicio = text;
-          etapa = "fim";
-          addMessage("⏰ Informe o horário de término (ex: 23:30):", "bot");
+          if (!validarHora(text)) {
+            addMessage("❌ Horário inválido! Use o formato HH:MM (00:00 a 23:59).", "bot");
+          } else {
+            denuncia.hora_inicio = text;
+            etapa = "fim";
+            addMessage("⏰ Informe o horário de término (ex: 23:30):", "bot");
+          }
           break;
 
         case "fim":
-          denuncia.fim = text;
-          etapa = "obs";
-          addMessage("📝 Deseja adicionar alguma observação?", "bot");
+          if (!validarHora(text)) {
+            addMessage("❌ Horário inválido! Use o formato HH:MM.", "bot");
+          } else {
+            denuncia.hora_fim = text;
+            etapa = "obs";
+            addMessage("📝 Deseja adicionar alguma observação?", "bot");
+          }
           break;
 
         case "obs":
-          denuncia.obs = text || "Nenhuma observação.";
+          denuncia.observacoes = text || "Nenhuma observação.";
           etapa = "confirmar";
-          addMessage(`✅ Confirme os dados da denúncia:
+          addMessage(`✅ Confirme os dados:
 Tipo: ${denuncia.tipo}
 Local: ${denuncia.local}
 Data: ${denuncia.data_evento}
-Dia: ${denuncia.dia_semana}
-Início: ${denuncia.inicio}
-Fim: ${denuncia.fim}
-Observação: ${denuncia.obs}`, "bot");
-          addMessage("Deseja enviar esta denúncia? (1 - Sim / 2 - Cancelar)", "bot");
+Início: ${denuncia.hora_inicio}
+Fim: ${denuncia.hora_fim}
+Observações: ${denuncia.observacoes}`, "bot");
+          addMessage("Deseja enviar? (1 - Sim / 2 - Cancelar)", "bot");
           break;
 
         case "confirmar":
@@ -121,32 +134,47 @@ Observação: ${denuncia.obs}`, "bot");
               const res = await fetch("/denuncia", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  tipo: denuncia.tipo,
-                  local: denuncia.local,
-                  data_evento: denuncia.data_evento,
-                  dia_semana: denuncia.dia_semana,
-                  hora_inicio: denuncia.inicio,
-                  hora_fim: denuncia.fim,
-                  observacoes: denuncia.obs
-                })
+                body: JSON.stringify(denuncia)
               });
               const data = await res.json();
-              if (data.success) {
-                addMessage("✅ Denúncia registrada com sucesso! Será analisada pela equipe de fiscalização do DETRAN-AM conforme o CTB e o MBFT.", "bot");
-              } else {
-                addMessage("❌ Erro ao registrar denúncia. Tente novamente.", "bot");
-              }
-            } catch (error) {
-              addMessage("❌ Erro de conexão. Verifique o servidor.", "bot");
+              if (data.success) addMessage("✅ Denúncia registrada com sucesso!", "bot");
+              else addMessage("❌ Erro ao registrar denúncia.", "bot");
+            } catch {
+              addMessage("⚠️ Falha de conexão com o servidor.", "bot");
             }
-            mostrarMenu();
+            etapa = "menu";
+            addMessage("Escolha uma nova opção (1-4):", "bot");
           } else {
-            addMessage("Denúncia cancelada. Voltando ao menu principal.", "bot");
-            mostrarMenu();
+            addMessage("🚫 Denúncia cancelada.", "bot");
+            etapa = "menu";
+            addMessage("Escolha uma nova opção (1-4):", "bot");
           }
           break;
       }
+    }
+
+    // 🎤 Reconhecimento de fala (não salva áudio)
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'pt-BR';
+      recognition.continuous = false;
+
+      const micBtn = document.createElement("button");
+      micBtn.textContent = "🎙️ Falar";
+      micBtn.style.marginLeft = "5px";
+      document.querySelector(".input-row").appendChild(micBtn);
+
+      micBtn.onclick = () => {
+        recognition.start();
+        addMessage("(🎧 Ouvindo... fale agora)", "bot");
+      };
+
+      recognition.onresult = (e) => {
+        const text = e.results[0][0].transcript.toLowerCase();
+        input.value = text;
+        sendMessage();
+      };
     }
   </script>
 </body>
