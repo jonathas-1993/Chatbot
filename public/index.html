@@ -1,181 +1,199 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Fiscabot - DETRAN-AM</title>
-  <link rel="stylesheet" href="style.css">
+  <style>
+    /* mínimo estilo para legibilidade */
+    body { font-family: Arial, sans-serif; background:#f7f7f7; padding:20px; }
+    .chat-container{ max-width:520px; margin:0 auto; background:#fff; padding:12px; border-radius:8px; box-shadow: 0 2px 8px rgba(0,0,0,.05); }
+    .bot{ background:#0b61a4; color:#fff; padding:10px; margin:6px 0; border-radius:6px; }
+    .user{ background:#e9e9e9; color:#000; padding:10px; margin:6px 0; border-radius:6px; }
+    .input-row{ display:flex; gap:8px; margin-top:10px; }
+    input#userInput{ flex:1; padding:10px; border-radius:6px; border:1px solid #ccc; }
+    button{ padding:10px 12px; border-radius:6px; border:none; background:#0b61a4; color:#fff; cursor:pointer; }
+    .small{ font-size:12px; color:#666; margin-top:6px;}
+  </style>
 </head>
 <body>
   <div class="chat-container">
-    <img src="fiscabot.png" alt="Fiscabot" style="width: 100%; border-radius: 12px; margin-bottom: 10px;">
     <div id="chat"></div>
 
     <div class="input-row">
       <input id="userInput" placeholder="Digite ou fale..." />
       <button id="sendBtn">Enviar</button>
     </div>
+    <div class="small">Obs: use formato de data DD/MM/AAAA e hora HH:MM.</div>
   </div>
 
-  <script>
-    const chat = document.getElementById("chat");
-    const input = document.getElementById("userInput");
-    const sendBtn = document.getElementById("sendBtn");
-    let etapa = "menu";
-    let denuncia = {};
+<script>
+const chat = document.getElementById("chat");
+const input = document.getElementById("userInput");
+const sendBtn = document.getElementById("sendBtn");
+let etapa = "menu";
+let denuncia = {};
 
-    // Mostrar mensagem no chat
-    function addMessage(text, sender) {
-      const msg = document.createElement("div");
-      msg.className = sender;
-      msg.textContent = text;
-      chat.appendChild(msg);
-      chat.scrollTop = chat.scrollHeight;
-    }
+function addMessage(text, sender) {
+  const msg = document.createElement("div");
+  msg.className = sender;
+  msg.textContent = text;
+  chat.appendChild(msg);
+  chat.scrollTop = chat.scrollHeight;
+}
 
-    // Envio automático com ENTER
-    input.addEventListener("keypress", e => {
-      if (e.key === "Enter") sendMessage();
-    });
-    sendBtn.addEventListener("click", sendMessage);
+input.addEventListener("keypress", e => {
+  if (e.key === "Enter") sendMessage();
+});
+sendBtn.addEventListener("click", sendMessage);
 
-    // Início
-    addMessage("👮‍♂️ Olá! Eu sou o Fiscabot, assistente do DETRAN-AM.", "bot");
-    addMessage("Escolha uma opção:\n1 - Denunciar Rolezinho\n2 - Denunciar Adega com som\n3 - Denunciar estacionamento irregular\n4 - Encerrar", "bot");
+// validações
+function validarData(data) {
+  const regex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
+  if (!regex.test(data)) return false;
+  const [dia, mes, ano] = data.split("/").map(Number);
+  const d = new Date(ano, mes - 1, dia);
+  return d.getFullYear() === ano && d.getMonth() === mes - 1 && d.getDate() === dia;
+}
+function validarHora(hora) {
+  const regex = /^([01]\d|2[0-3]):([0-5]\d)$/;
+  return regex.test(hora);
+}
 
-    function validarData(data) {
-      const regex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
-      if (!regex.test(data)) return false;
-      const [dia, mes, ano] = data.split("/").map(Number);
-      const d = new Date(ano, mes - 1, dia);
-      return d.getFullYear() === ano && d.getMonth() === mes - 1 && d.getDate() === dia;
-    }
+// início
+addMessage("👮‍♂️ Olá! Eu sou o Fiscabot, assistente do DETRAN-AM.", "bot");
+addMessage("Escolha uma opção:\n1 - Denunciar Rolezinho\n2 - Denunciar Adega com som\n3 - Denunciar estacionamento irregular\n4 - Encerrar", "bot");
 
-    function validarHora(hora) {
-      const regex = /^([01]\d|2[0-3]):([0-5]\d)$/;
-      return regex.test(hora);
-    }
+function mapVoiceToNumber(t) {
+  const mapaFala = { "um": "1", "dois":"2", "três":"3", "tres":"3", "quatro":"4" };
+  return mapaFala[t] || t;
+}
 
-    async function sendMessage() {
-      let text = input.value.trim().toLowerCase();
-      if (!text) return;
-      input.value = "";
-      addMessage(text, "user");
+async function sendMessage() {
+  let text = input.value.trim().toLowerCase();
+  if (!text) return;
+  input.value = "";
+  text = mapVoiceToNumber(text);
+  addMessage(text, "user");
 
-      // converter fala “um”, “dois” etc para número
-      const mapaFala = { "um": "1", "dois": "2", "três": "3", "tres": "3", "quatro": "4" };
-      if (mapaFala[text]) text = mapaFala[text];
+  switch (etapa) {
+    case "menu":
+      if (["1","2","3"].includes(text)) {
+        denuncia.tipo = text === "1" ? "Rolezinho" : text === "2" ? "Adega" : "Estacionamento irregular";
+        etapa = "local";
+        addMessage(`📍 Informe o local da ocorrência (${denuncia.tipo}):`, "bot");
+      } else if (text === "4") {
+        addMessage("✅ Atendimento encerrado.", "bot");
+      } else {
+        addMessage("❌ Opção inválida. Diga 1,2,3 ou 4.", "bot");
+      }
+      break;
 
-      switch (etapa) {
-        case "menu":
-          if (["1", "2", "3"].includes(text)) {
-            denuncia.tipo = text === "1" ? "Rolezinho" : text === "2" ? "Adega" : "Estacionamento irregular";
-            etapa = "local";
-            addMessage(`📍 Informe o local da ocorrência (${denuncia.tipo}):`, "bot");
-          } else if (text === "4") {
-            addMessage("✅ Atendimento encerrado. 🚦", "bot");
-          } else {
-            addMessage("❌ Opção inválida. Diga ou digite 1, 2, 3 ou 4.", "bot");
-          }
-          break;
+    case "local":
+      denuncia.local = text;
+      etapa = "data";
+      addMessage("📅 Informe a data da ocorrência (ex: 15/10/2025):", "bot");
+      break;
 
-        case "local":
-          denuncia.local = text;
-          etapa = "data";
-          addMessage("📅 Informe a data da ocorrência (ex: 15/10/2025):", "bot");
-          break;
+    case "data":
+      if (!validarData(text)) {
+        addMessage("❌ Data inválida! Use DD/MM/AAAA.", "bot");
+      } else {
+        denuncia.data_evento = text;
+        etapa = "inicio";
+        addMessage("⏰ Informe o horário de início (ex: 20:00):", "bot");
+      }
+      break;
 
-        case "data":
-          if (!validarData(text)) {
-            addMessage("❌ Data inválida! Use o formato DD/MM/AAAA e uma data real.", "bot");
-          } else {
-            denuncia.data_evento = text;
-            etapa = "inicio";
-            addMessage("⏰ Informe o horário de início (ex: 20:00):", "bot");
-          }
-          break;
+    case "inicio":
+      if (!validarHora(text)) {
+        addMessage("❌ Horário inválido! Use HH:MM.", "bot");
+      } else {
+        denuncia.hora_inicio = text;
+        etapa = "fim";
+        addMessage("⏰ Informe o horário de término (ex: 23:30):", "bot");
+      }
+      break;
 
-        case "inicio":
-          if (!validarHora(text)) {
-            addMessage("❌ Horário inválido! Use o formato HH:MM (00:00 a 23:59).", "bot");
-          } else {
-            denuncia.hora_inicio = text;
-            etapa = "fim";
-            addMessage("⏰ Informe o horário de término (ex: 23:30):", "bot");
-          }
-          break;
+    case "fim":
+      if (!validarHora(text)) {
+        addMessage("❌ Horário inválido! Use HH:MM.", "bot");
+      } else {
+        denuncia.hora_fim = text;
+        etapa = "obs";
+        addMessage("📝 Deseja adicionar alguma observação? (ou diga 'não')", "bot");
+      }
+      break;
 
-        case "fim":
-          if (!validarHora(text)) {
-            addMessage("❌ Horário inválido! Use o formato HH:MM.", "bot");
-          } else {
-            denuncia.hora_fim = text;
-            etapa = "obs";
-            addMessage("📝 Deseja adicionar alguma observação?", "bot");
-          }
-          break;
-
-        case "obs":
-          denuncia.observacoes = text || "Nenhuma observação.";
-          etapa = "confirmar";
-          addMessage(`✅ Confirme os dados:
+    case "obs":
+      denuncia.observacoes = (text === "não" || text === "nao") ? "Nenhuma observação." : text;
+      etapa = "confirmar";
+      addMessage(`✅ Confirme os dados:
 Tipo: ${denuncia.tipo}
 Local: ${denuncia.local}
 Data: ${denuncia.data_evento}
 Início: ${denuncia.hora_inicio}
 Fim: ${denuncia.hora_fim}
 Observações: ${denuncia.observacoes}`, "bot");
-          addMessage("Deseja enviar? (1 - Sim / 2 - Cancelar)", "bot");
-          break;
+      addMessage("Deseja enviar? (1 - Sim / 2 - Cancelar)", "bot");
+      break;
 
-        case "confirmar":
-          if (text === "1") {
-            try {
-              const res = await fetch("/denuncia", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(denuncia)
-              });
-              const data = await res.json();
-              if (data.success) addMessage("✅ Denúncia registrada com sucesso!", "bot");
-              else addMessage("❌ Erro ao registrar denúncia.", "bot");
-            } catch {
-              addMessage("⚠️ Falha de conexão com o servidor.", "bot");
-            }
-            etapa = "menu";
-            addMessage("Escolha uma nova opção (1-4):", "bot");
-          } else {
-            addMessage("🚫 Denúncia cancelada.", "bot");
-            etapa = "menu";
-            addMessage("Escolha uma nova opção (1-4):", "bot");
-          }
-          break;
+    case "confirmar":
+      if (text === "1") {
+        // validação final antes do envio
+        if (!validarData(denuncia.data_evento) || !validarHora(denuncia.hora_inicio) || !validarHora(denuncia.hora_fim)) {
+          addMessage("❌ Dados inválidos. Cancelando envio.", "bot");
+          etapa = "menu";
+          addMessage("Escolha uma nova opção (1-4):", "bot");
+          return;
+        }
+        try {
+          const res = await fetch("/denuncia", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(denuncia)
+          });
+          const data = await res.json();
+          if (res.ok && data.success) addMessage("✅ Denúncia registrada com sucesso!", "bot");
+          else addMessage("❌ Erro ao registrar denúncia: " + (data.message || JSON.stringify(data.error)), "bot");
+        } catch (err) {
+          addMessage("⚠️ Falha de conexão com o servidor.", "bot");
+          console.error("Erro fetch:", err);
+        }
+        etapa = "menu";
+        addMessage("Escolha uma nova opção (1-4):", "bot");
+      } else {
+        addMessage("🚫 Denúncia cancelada.", "bot");
+        etapa = "menu";
+        addMessage("Escolha uma nova opção (1-4):", "bot");
       }
-    }
+      break;
+  }
+}
 
-    // 🎤 Reconhecimento de fala (não salva áudio)
-    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      const recognition = new SpeechRecognition();
-      recognition.lang = 'pt-BR';
-      recognition.continuous = false;
+// speech recognition (se disponível) - opcional, não altera envio
+if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const recognition = new SpeechRecognition();
+  recognition.lang = 'pt-BR';
+  recognition.continuous = false;
 
-      const micBtn = document.createElement("button");
-      micBtn.textContent = "🎙️ Falar";
-      micBtn.style.marginLeft = "5px";
-      document.querySelector(".input-row").appendChild(micBtn);
+  const micBtn = document.createElement("button");
+  micBtn.textContent = "🎙️ Falar";
+  micBtn.style.marginLeft = "6px";
+  document.querySelector(".input-row").appendChild(micBtn);
 
-      micBtn.onclick = () => {
-        recognition.start();
-        addMessage("(🎧 Ouvindo... fale agora)", "bot");
-      };
+  micBtn.onclick = () => {
+    recognition.start();
+    addMessage("(🎧 Ouvindo... fale agora)", "bot");
+  };
 
-      recognition.onresult = (e) => {
-        const text = e.results[0][0].transcript.toLowerCase();
-        input.value = text;
-        sendMessage();
-      };
-    }
-  </script>
+  recognition.onresult = (e) => {
+    const txt = e.results[0][0].transcript.toLowerCase();
+    input.value = txt;
+    sendMessage();
+  };
+}
+</script>
 </body>
 </html>
