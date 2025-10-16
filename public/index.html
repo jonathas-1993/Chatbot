@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Fiscabot - DETRAN-AM</title>
   <style>
-    /* mínimo estilo para legibilidade */
     body { font-family: Arial, sans-serif; background:#f7f7f7; padding:20px; }
     .chat-container{ max-width:520px; margin:0 auto; background:#fff; padding:12px; border-radius:8px; box-shadow: 0 2px 8px rgba(0,0,0,.05); }
-    .bot{ background:#0b61a4; color:#fff; padding:10px; margin:6px 0; border-radius:6px; }
+    .logo { width:100%; max-height:180px; object-fit:contain; border-radius:10px; margin-bottom:8px; }
+    .bot{ background:#0b61a4; color:#fff; padding:10px; margin:6px 0; border-radius:6px; white-space:pre-wrap; }
     .user{ background:#e9e9e9; color:#000; padding:10px; margin:6px 0; border-radius:6px; }
     .input-row{ display:flex; gap:8px; margin-top:10px; }
     input#userInput{ flex:1; padding:10px; border-radius:6px; border:1px solid #ccc; }
@@ -18,6 +18,9 @@
 </head>
 <body>
   <div class="chat-container">
+    <!-- Imagem do bot (certifique-se que public/fiscabot.png exista) -->
+    <img src="fiscabot.png" alt="Fiscabot" class="logo" />
+
     <div id="chat"></div>
 
     <div class="input-row">
@@ -34,6 +37,7 @@ const sendBtn = document.getElementById("sendBtn");
 let etapa = "menu";
 let denuncia = {};
 
+// Mostrar mensagem no chat
 function addMessage(text, sender) {
   const msg = document.createElement("div");
   msg.className = sender;
@@ -47,7 +51,7 @@ input.addEventListener("keypress", e => {
 });
 sendBtn.addEventListener("click", sendMessage);
 
-// validações
+// Validações
 function validarData(data) {
   const regex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
   if (!regex.test(data)) return false;
@@ -59,15 +63,14 @@ function validarHora(hora) {
   const regex = /^([01]\d|2[0-3]):([0-5]\d)$/;
   return regex.test(hora);
 }
-
-// início
-addMessage("👮‍♂️ Olá! Eu sou o Fiscabot, assistente do DETRAN-AM.", "bot");
-addMessage("Escolha uma opção:\n1 - Denunciar Rolezinho\n2 - Denunciar Adega com som\n3 - Denunciar estacionamento irregular\n4 - Encerrar", "bot");
-
 function mapVoiceToNumber(t) {
   const mapaFala = { "um": "1", "dois":"2", "três":"3", "tres":"3", "quatro":"4" };
   return mapaFala[t] || t;
 }
+
+// Init
+addMessage("👮‍♂️ Olá! Eu sou o Fiscabot, assistente da Fiscalização de Trânsito do DETRAN-AM.", "bot");
+addMessage("Escolha uma opção:\n1 - Denunciar Rolezinho\n2 - Denunciar Adega com som\n3 - Denunciar estacionamento irregular\n4 - Encerrar", "bot");
 
 async function sendMessage() {
   let text = input.value.trim().toLowerCase();
@@ -79,6 +82,7 @@ async function sendMessage() {
   switch (etapa) {
     case "menu":
       if (["1","2","3"].includes(text)) {
+        denuncia = {}; // reset
         denuncia.tipo = text === "1" ? "Rolezinho" : text === "2" ? "Adega" : "Estacionamento irregular";
         etapa = "local";
         addMessage(`📍 Informe o local da ocorrência (${denuncia.tipo}):`, "bot");
@@ -91,6 +95,18 @@ async function sendMessage() {
 
     case "local":
       denuncia.local = text;
+      etapa = "bairro";
+      addMessage("🏘️ Informe o bairro (ou 'não sei'):", "bot");
+      break;
+
+    case "bairro":
+      denuncia.bairro = text === "não sei" || text === "nao sei" ? null : text;
+      etapa = "referencia";
+      addMessage("📌 Informe um ponto de referência (ou 'não sei'):", "bot");
+      break;
+
+    case "referencia":
+      denuncia.referencia = text === "não sei" || text === "nao sei" ? null : text;
       etapa = "data";
       addMessage("📅 Informe a data da ocorrência (ex: 15/10/2025):", "bot");
       break;
@@ -131,6 +147,8 @@ async function sendMessage() {
       addMessage(`✅ Confirme os dados:
 Tipo: ${denuncia.tipo}
 Local: ${denuncia.local}
+Bairro: ${denuncia.bairro || 'Não informado'}
+Referência: ${denuncia.referencia || 'Não informado'}
 Data: ${denuncia.data_evento}
 Início: ${denuncia.hora_inicio}
 Fim: ${denuncia.hora_fim}
@@ -140,7 +158,7 @@ Observações: ${denuncia.observacoes}`, "bot");
 
     case "confirmar":
       if (text === "1") {
-        // validação final antes do envio
+        // validação final
         if (!validarData(denuncia.data_evento) || !validarHora(denuncia.hora_inicio) || !validarHora(denuncia.hora_fim)) {
           addMessage("❌ Dados inválidos. Cancelando envio.", "bot");
           etapa = "menu";
@@ -154,8 +172,11 @@ Observações: ${denuncia.observacoes}`, "bot");
             body: JSON.stringify(denuncia)
           });
           const data = await res.json();
-          if (res.ok && data.success) addMessage("✅ Denúncia registrada com sucesso!", "bot");
-          else addMessage("❌ Erro ao registrar denúncia: " + (data.message || JSON.stringify(data.error)), "bot");
+          if (res.ok && data.success) {
+            addMessage("✅ Denúncia registrada com sucesso!", "bot");
+          } else {
+            addMessage("❌ Erro ao registrar denúncia: " + (data.message || JSON.stringify(data.error)), "bot");
+          }
         } catch (err) {
           addMessage("⚠️ Falha de conexão com o servidor.", "bot");
           console.error("Erro fetch:", err);
@@ -171,7 +192,7 @@ Observações: ${denuncia.observacoes}`, "bot");
   }
 }
 
-// speech recognition (se disponível) - opcional, não altera envio
+// speech recognition (opcional)
 if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   const recognition = new SpeechRecognition();
